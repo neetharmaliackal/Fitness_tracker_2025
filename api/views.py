@@ -5,6 +5,10 @@ from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
 from .serializers import UserRegistrationSerializer
 
+from rest_framework import viewsets, permissions
+from .models import Activity
+from .serializers import ActivitySerializer
+
 # Registration view
 class RegisterView(generics.CreateAPIView):
     serializer_class = UserRegistrationSerializer
@@ -33,3 +37,13 @@ class LogoutView(APIView):
             return Response({"detail": "User logged out successfully."}, status=status.HTTP_205_RESET_CONTENT)
         except Exception as e:
             return Response({"error": "Invalid token."}, status=status.HTTP_400_BAD_REQUEST)
+
+class ActivityViewSet(viewsets.ModelViewSet):
+    serializer_class = ActivitySerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        return Activity.objects.filter(user=self.request.user).order_by('-date', '-created_at')
+
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)
