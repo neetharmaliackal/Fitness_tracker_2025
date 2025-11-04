@@ -52,3 +52,7 @@ class ActivityViewSet(viewsets.ModelViewSet):
         response = super().update(request, *args, **kwargs)
         response.data = {"detail": "Activity updated successfully."}
         return response
+
+    def destroy(self, request, *args, **kwargs):
+        super().destroy(request, *args, **kwargs)
+        return Response({"detail": "Activity deleted successfully."}, status=status.HTTP_204_NO_CONTENT)
