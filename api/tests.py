@@ -1,3 +1,112 @@
 from django.test import TestCase
+from django.contrib.auth import get_user_model
+from rest_framework.test import APIClient
+from rest_framework import status
+from datetime import date
+from .models import Activity
 
-# Create your tests here.
+User = get_user_model()
+
+
+class UserRegistrationTest(TestCase):
+    def setUp(self):
+        self.client = APIClient()
+
+    def test_user_registration(self):
+        """
+        Test that a new user can register successfully.
+        URL: /api/auth/register/
+        """
+        data = {
+            "username": "newuser",
+            "email": "newuser@example.com",
+            "first_name": "New",
+            "last_name": "User",
+            "password": "StrongPass123",
+            "password2": "StrongPass123"  # required by serializer
+        }
+        response = self.client.post("/api/auth/register/", data)
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertTrue(User.objects.filter(username="newuser").exists())
+        user = User.objects.get(username="newuser")
+        self.assertEqual(user.email, "newuser@example.com")
+        self.assertTrue(user.check_password("StrongPass123"))
+
+
+class ActivityAPITest(TestCase):
+    def setUp(self):
+        self.client = APIClient()
+        self.user = User.objects.create_user(
+            username="tester",
+            email="tester@example.com",
+            password="password123"
+        )
+        # Authenticate user for API calls
+        self.client.force_authenticate(user=self.user)
+
+    def test_create_activity(self):
+        """
+        Test creating a new activity.
+        URL: /api/activities/create/
+        """
+        data = {
+            "activity_type": "workout",
+            "title": "Morning Run",
+            "description": "5 km run",
+            "date": "2025-11-04",
+            "duration_minutes": 30,
+            "status": "planned"
+        }
+        response = self.client.post("/api/activities/", data)
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(Activity.objects.count(), 1)
+        self.assertEqual(Activity.objects.first().description, "5 km run")
+
+    def test_list_activities(self):
+        """
+        Test listing activities.
+        URL: /api/activities/
+        """
+        Activity.objects.create(
+            user=self.user,
+            activity_type="meal",
+            description="Lunch",
+            date=date.today()
+        )
+        response = self.client.get("/api/activities/")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), 1)
+
+    def test_update_activity(self):
+        """
+        Test updating an existing activity.
+        URL: /api/activities/<id>/
+        """
+        activity = Activity.objects.create(
+            user=self.user,
+            activity_type="steps",
+            description="3000 steps",
+            date=date.today()
+        )
+        data = {"description": "5000 steps", "status": "completed"}
+        response = self.client.patch(f"/api/activities/{activity.id}/", data)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        activity.refresh_from_db()
+        self.assertEqual(activity.description, "5000 steps")
+        self.assertEqual(activity.status, "completed")
+
+    def test_delete_activity(self):
+        """
+        Test deleting an activity.
+        URL: /api/activities/<id>/
+        """
+        activity = Activity.objects.create(
+            user=self.user,
+            activity_type="workout",
+            description="Gym session",
+            date=date.today()
+        )
+        response = self.client.delete(f"/api/activities/{activity.id}/")
+        # Must return 204 No Content for correct REST semantics
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(Activity.objects.count(), 0)
