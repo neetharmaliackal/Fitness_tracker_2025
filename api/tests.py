@@ -6,7 +6,7 @@ from datetime import date
 from .models import Activity
 
 User = get_user_model()
-
+#testcases
 
 class UserRegistrationTest(TestCase):
     def setUp(self):
