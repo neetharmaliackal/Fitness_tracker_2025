@@ -55,5 +55,4 @@ class ActivityViewSet(viewsets.ModelViewSet):
 
     def destroy(self, request, *args, **kwargs):
         super().destroy(request, *args, **kwargs)
-        #deletion message
-        return Response({"detail": "Activity deleted successfully."}, status=status.HTTP_204_NO_CONTENT)
+        return Response({"detail": "Activity deleted successfully."}, status=status.HTTP_200_OK)
